@@ -1,0 +1,16 @@
+[
+    {
+      "modid": "QuestingSheets",
+      "name": "QuestingSheets",
+      "description": "Adds human-readable JSON import/export of HQM quest pages.",
+      "version": "${version}",
+      "mcversion": "${mcversion}",
+      "url": "",
+      "updateUrl": "",
+      "authors": ["hilburn"],
+      "credits": "Authored by hilburn",
+      "logoFile": "",
+      "screenshots": [],
+      "dependencies": []
+    }
+]

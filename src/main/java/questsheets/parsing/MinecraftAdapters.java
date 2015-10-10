@@ -9,13 +9,17 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.JsonToNBT;
+import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
 
 import java.io.IOException;
 
-public class QuestAdapters
+public class MinecraftAdapters
 {
-    public static final TypeAdapter<ItemStack> ITEM_STACK_TYPE_ADAPTER = new TypeAdapter<ItemStack>()
+    public static final TypeAdapter<ItemStack> ITEM_STACK = new TypeAdapter<ItemStack>()
     {
         private static final String ID = "id";
         private static final String DAMAGE = "damage";
@@ -43,7 +47,7 @@ public class QuestAdapters
             }
             if (value.hasTagCompound() && !value.getTagCompound().hasNoTags())
             {
-                NBT_TAG_COMPOUND_TYPE_ADAPTER.write(out.name(NBT), value.getTagCompound());
+                NBT_TAG_COMPOUND.write(out.name(NBT), value.getTagCompound());
             }
             out.endObject();
         }
@@ -73,9 +77,10 @@ public class QuestAdapters
                     size = in.nextInt();
                 } else if (name.equalsIgnoreCase(NBT))
                 {
-                    tag = NBT_TAG_COMPOUND_TYPE_ADAPTER.read(in);
+                    tag = NBT_TAG_COMPOUND.read(in);
                 }
             }
+            in.endObject();
             String modid = "minecraft", name = "";
             int colon = id.indexOf(':');
 
@@ -105,18 +110,43 @@ public class QuestAdapters
         }
     };
 
-    public static final TypeAdapter<NBTTagCompound> NBT_TAG_COMPOUND_TYPE_ADAPTER = new TypeAdapter<NBTTagCompound>()
+    public static final TypeAdapter<NBTTagCompound> NBT_TAG_COMPOUND = new TypeAdapter<NBTTagCompound>()
     {
         @Override
         public void write(JsonWriter out, NBTTagCompound value) throws IOException
         {
-
+            out.value(value.toString());
         }
 
         @Override
         public NBTTagCompound read(JsonReader in) throws IOException
         {
-            return null;
+            try
+            {
+                NBTBase nbtBase = JsonToNBT.func_150315_a(in.nextString());
+                if (nbtBase instanceof NBTTagCompound)
+                {
+                    return (NBTTagCompound)nbtBase;
+                }
+            } catch (Exception ignored)
+            {
+            }
+            throw new IOException("Failed to read NBT");
+        }
+    };
+
+    public static final TypeAdapter<Fluid> FLUID = new TypeAdapter<Fluid>()
+    {
+        @Override
+        public void write(JsonWriter out, Fluid value) throws IOException
+        {
+            out.value(value.getName());
+        }
+
+        @Override
+        public Fluid read(JsonReader in) throws IOException
+        {
+            return FluidRegistry.getFluid(in.nextString());
         }
     };
 }

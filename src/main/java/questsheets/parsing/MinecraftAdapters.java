@@ -63,7 +63,7 @@ public class MinecraftAdapters
             int damage = 0, size = 1;
             NBTTagCompound tag = null;
             in.beginObject();
-            while (in.peek() != JsonToken.NULL)
+            while (in.hasNext())
             {
                 String name = in.nextName();
                 if (name.equalsIgnoreCase(ID))

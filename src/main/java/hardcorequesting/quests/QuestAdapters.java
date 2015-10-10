@@ -15,15 +15,20 @@ import questsheets.parsing.MinecraftAdapters;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class QuestAdapters
 {
-    public static QuestSet SET;
     public static Quest QUEST;
     public static QuestTask TASK;
+    public static int QUEST_ID;
+    private static Map<Quest, List<Integer>> requirementMapping = new HashMap<>();
+    private static Map<Quest, List<Integer>> optionMapping = new HashMap<>();
 
 
     public enum TaskType
@@ -45,6 +50,7 @@ public class QuestAdapters
             try
             {
                 addTaskData = Quest.class.getDeclaredMethod("addTaskData", QuestData.class);
+                addTaskData.setAccessible(true);
             } catch (NoSuchMethodException ignored)
             {
             }
@@ -69,15 +75,24 @@ public class QuestAdapters
                 if(prev != null) {
                     task.addRequirement(prev);
                 }
-
                 quest.getTasks().add(task);
-                addTaskData.invoke(quest, quest.getQuestData(QuestSheets.getPlayer()));
                 SaveHelper.add(SaveHelper.EditType.TASK_CREATE);
                 return task;
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return null;
+        }
+
+        public void addTaskData(Quest quest)
+        {
+            try
+            {
+                addTaskData.invoke(quest, quest.getQuestData(QuestSheets.getPlayer()));
+            } catch (Exception e)
+            {
+                e.printStackTrace();
+            }
         }
         
         public static TaskType getType(Class<? extends QuestTask> clazz)
@@ -130,7 +145,7 @@ public class QuestAdapters
             Fluid fluid = null;
             int required = 1;
             ItemPrecision precision = ItemPrecision.PRECISE;
-            while (in.peek() != JsonToken.NULL)
+            while (in.hasNext())
             {
                 String next = in.nextName();
                 if (next.equalsIgnoreCase(ITEM))
@@ -203,7 +218,7 @@ public class QuestAdapters
         {
             in.beginObject();
             QuestTaskLocation.Location result = ((QuestTaskLocation) TASK).new Location();
-            while (in.peek() != JsonToken.NULL)
+            while (in.hasNext())
             {
                 String name = in.nextName();
                 if (name.equalsIgnoreCase(NAME))
@@ -266,7 +281,7 @@ public class QuestAdapters
         {
             in.beginObject();
             QuestTaskMob.Mob result = ((QuestTaskMob) TASK).new Mob();
-            while (in.peek() != JsonToken.NULL)
+            while (in.hasNext())
             {
                 String name = in.nextName();
                 if (name.equalsIgnoreCase(NAME))
@@ -322,7 +337,7 @@ public class QuestAdapters
             Reputation reputation = null;
             int low = Integer.MIN_VALUE, high = Integer.MIN_VALUE;
             boolean inverted = false;
-            while (in.peek() != JsonToken.NULL)
+            while (in.hasNext())
             {
                 String name = in.nextName();
                 if (name.equalsIgnoreCase(REPUTATION))
@@ -440,7 +455,7 @@ public class QuestAdapters
                     TASK.setLongDescription(in.nextString());
                 } else if (TASK instanceof QuestTaskItems && name.equalsIgnoreCase(ITEMS))
                 {
-                    List<QuestTaskItems.ItemRequirement> list = new ArrayList<QuestTaskItems.ItemRequirement>();
+                    List<QuestTaskItems.ItemRequirement> list = new ArrayList<>();
                     in.beginArray();
                     while (in.hasNext())
                     {
@@ -492,6 +507,7 @@ public class QuestAdapters
                 }
             }
             in.endObject();
+            type.addTaskData(QUEST);
             return null;
         }
     };
@@ -518,7 +534,7 @@ public class QuestAdapters
         @Override
         public RepeatInfo read(JsonReader in) throws IOException
         {
-            RepeatType type = null;
+            RepeatType type = RepeatType.NONE;
             int days = 0, hours = 0;
             in.beginObject();
             while (in.hasNext())
@@ -526,7 +542,7 @@ public class QuestAdapters
                 switch(in.nextName())
                 {
                     case TYPE:
-                        type = RepeatType.valueOf(in.nextName());
+                        type = RepeatType.valueOf(in.nextString());
                         break;
                     case HOURS:
                         hours = in.nextInt();
@@ -536,7 +552,6 @@ public class QuestAdapters
                 }
             }
             in.endObject();
-            if (type == null) type = RepeatType.NONE;
             return new RepeatInfo(type, days, hours);
         }
     };
@@ -586,7 +601,7 @@ public class QuestAdapters
         private final String ICON = "icon";
         private final String BIG_ICON = "bigIcon";
         private final String REQUIREMENTS = "requirements";
-        private final String LINKS = "links";
+        private final String OPTIONS = "options";
         private final String REPEAT = "repeat";
         private final String TRIGGER = "trigger";
         private final String TRIGGER_TASKS = "triggerTasks";
@@ -595,7 +610,6 @@ public class QuestAdapters
         private final String REWARDS = "reward";
         private final String REWARDS_CHOICE = "rewardChoice";
         private final String REWARDS_REPUTATION = "reputationRewards";
-
 
         @Override
         public void write(JsonWriter out, Quest value) throws IOException
@@ -614,9 +628,15 @@ public class QuestAdapters
                 MinecraftAdapters.ITEM_STACK.write(out.name(ICON), value.getIcon());
             }
             writeQuestList(out, value.getRequirement(), value.getQuestSet().getQuests(), REQUIREMENTS);
-            writeQuestList(out, value.getOptionLinks(), value.getQuestSet().getQuests(), LINKS);
-            REPEAT_INFO_ADAPTER.write(out.name(REPEAT), value.getRepeatInfo());
-            out.name(TRIGGER).value(value.getTriggerType().name());
+            writeQuestList(out, value.getOptionLinks(), value.getQuestSet().getQuests(), OPTIONS);
+            if (value.getRepeatInfo().getType() != RepeatType.NONE)
+            {
+                REPEAT_INFO_ADAPTER.write(out.name(REPEAT), value.getRepeatInfo());
+            }
+            if (value.getTriggerType() != TriggerType.NONE)
+            {
+                out.name(TRIGGER).value(value.getTriggerType().name());
+            }
             if (value.getTriggerType().isUseTaskCount())
             {
                 out.name(TRIGGER_TASKS).value(value.getTriggerTasks());
@@ -681,7 +701,116 @@ public class QuestAdapters
         @Override
         public Quest read(JsonReader in) throws IOException
         {
+            int ID_OFFSET = Quest.size();
+            QUEST = new Quest(ID_OFFSET, "", "", 0, 0, false);
+            List<Integer> requirement = new ArrayList<>(), options = new ArrayList<>();
+            in.beginObject();
+            while (in.hasNext())
+            {
+                switch (in.nextName())
+                {
+                    case NAME:
+                        QUEST.setName(in.nextString());
+                        break;
+                    case DESCRIPTION:
+                        QUEST.setDescription(in.nextString());
+                        break;
+                    case X:
+                        ReflectionHelper.setPrivateValue(Quest.class, QUEST, in.nextInt(), X);
+                        break;
+                    case Y:
+                        ReflectionHelper.setPrivateValue(Quest.class, QUEST, in.nextInt(), Y);
+                        break;
+                    case TRIGGER_TASKS:
+                        QUEST.setTriggerTasks(in.nextInt());
+                        break;
+                    case PARENT_REQUIREMENT:
+                        QUEST.setParentRequirementCount(in.nextInt());
+                        break;
+                    case BIG_ICON:
+                        QUEST.setBigIcon(in.nextBoolean());
+                        break;
+                    case ICON:
+                        QUEST.setIcon(MinecraftAdapters.ITEM_STACK.read(in));
+                        break;
+                    case REQUIREMENTS:
+                        in.beginArray();
+                        while (in.hasNext())
+                        {
+                            requirement.add(in.nextInt() + QUEST_ID);
+                        }
+                        in.endArray();
+                        break;
+                    case OPTIONS:
+                        in.beginArray();
+                        while (in.hasNext())
+                        {
+                            options.add(in.nextInt() + QUEST_ID);
+                        }
+                        in.endArray();
+                        break;
+                    case REPEAT:
+                        QUEST.setRepeatInfo(REPEAT_INFO_ADAPTER.read(in));
+                        break;
+                    case TRIGGER:
+                        QUEST.setTriggerType(TriggerType.valueOf(in.nextString()));
+                        break;
+                    case TASKS:
+                        in.beginArray();
+                        while (in.hasNext())
+                        {
+                            QuestTask task = TASK_ADAPTER.read(in);
+                            if (task != null)
+                            {
+                                QUEST.getTasks().add(task);
+
+                            }
+                        }
+                        in.endArray();
+                        break;
+                    case REWARDS:
+                        ReflectionHelper.setPrivateValue(Quest.class, QUEST, readItemStackArray(in), REWARDS);
+                        break;
+                    case REWARDS_CHOICE:
+                        ReflectionHelper.setPrivateValue(Quest.class, QUEST, readItemStackArray(in), REWARDS_CHOICE);
+                        break;
+                    case REWARDS_REPUTATION:
+                        in.beginArray();
+                        List<Quest.ReputationReward> reputationRewards = new ArrayList<>();
+                        while (in.hasNext())
+                        {
+                            Quest.ReputationReward reward = REPUTATION_REWARD_ADAPTER.read(in);
+                            if (reward != null)
+                                reputationRewards.add(reward);
+                        }
+                        QUEST.setReputationRewards(reputationRewards);
+                        in.endArray();
+                        break;
+                }
+            }
+            in.endObject();
+            if (!QUEST.getName().isEmpty())
+            {
+                requirementMapping.put(QUEST, requirement);
+                optionMapping.put(QUEST, options);
+                return QUEST;
+            }
+            QuestLine.getActiveQuestLine().quests.remove(QUEST.getId());
             return null;
+        }
+
+        private ItemStack[] readItemStackArray(JsonReader in) throws IOException
+        {
+            List<ItemStack> stacks = new ArrayList<>();
+            in.beginArray();
+            while (in.hasNext())
+            {
+                ItemStack stack = MinecraftAdapters.ITEM_STACK.read(in);
+                if (stack != null)
+                    stacks.add(stack);
+            }
+            in.endArray();
+            return stacks.toArray(new ItemStack[stacks.size()]);
         }
     };
 
@@ -709,7 +838,10 @@ public class QuestAdapters
         public QuestSet read(JsonReader in) throws IOException
         {
             String name = null, description = null;
+            requirementMapping.clear();
+            optionMapping.clear();
             List<Quest> quests = new ArrayList<Quest>();
+            in.beginObject();
             while (in.hasNext())
             {
                 String next = in.nextName();
@@ -722,6 +854,7 @@ public class QuestAdapters
                 } else if (next.equalsIgnoreCase(QUESTS))
                 {
                     in.beginArray();
+                    QUEST_ID = Quest.size();
                     while (in.hasNext())
                     {
                         Quest quest = QUEST_ADAPTER.read(in);
@@ -733,14 +866,43 @@ public class QuestAdapters
                     in.endArray();
                 }
             }
+            in.endObject();
+            for (QuestSet set : Quest.getQuestSets())
+            {
+                if (set.getName().equals(name))
+                {
+                    return removeQuests(quests);
+                }
+            }
             if (name != null && description != null)
             {
                 QuestSet set = new QuestSet(name, description);
+                Quest.getQuestSets().add(set);
+                SaveHelper.add(SaveHelper.EditType.SET_CREATE);
                 for (Quest quest : quests)
                 {
-                    set.addQuest(quest);
+                    quest.setQuestSet(set);
+                }
+                for (Map.Entry<Quest, List<Integer>> entry : requirementMapping.entrySet())
+                {
+                    for (int i : entry.getValue())
+                        entry.getKey().addRequirement(i);
+                }
+                for (Map.Entry<Quest, List<Integer>> entry : optionMapping.entrySet())
+                {
+                    for (int i : entry.getValue())
+                        entry.getKey().addOptionLink(i);
                 }
                 return set;
+            }
+            return removeQuests(quests);
+        }
+
+        private QuestSet removeQuests(List<Quest> quests)
+        {
+            for (Quest quest : quests)
+            {
+                QuestLine.getActiveQuestLine().quests.remove(quest.getId());
             }
             return null;
         }

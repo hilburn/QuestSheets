@@ -24,7 +24,13 @@ public class CommandSave extends CommandBase
     @Override
     public void handleCommand(ICommandSender sender, String[] arguments)
     {
-        if (arguments.length > 0)
+        if (arguments.length == 1 && arguments[0].equals("all"))
+        {
+            for (QuestSet set : Quest.getQuestSets())
+            {
+                save(sender, set, set.getName());
+            }
+        } else if (arguments.length > 0)
         {
             for (QuestSet set : Quest.getQuestSets())
             {

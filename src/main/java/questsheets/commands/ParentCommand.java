@@ -19,6 +19,7 @@ public class ParentCommand extends CommandBase
     {
         register(new CommandHelp());
         register(new CommandSave());
+        register(new CommandLoad());
     }
 
     public static void register(ISubCommand command)

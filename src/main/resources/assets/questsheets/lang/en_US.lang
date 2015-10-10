@@ -5,6 +5,8 @@
 qs.command.notFound=Command not found
 qs.command.noPermission=You not have permission to use this command
 qs.command.loadFailed=Loading failed
+qs.command.loadSuccess=Loaded: %s
+qs.command.fileNotFound=File not found
 qs.command.saveFailed=Save failed
 qs.command.savedTo=Quests saved to: %s
 

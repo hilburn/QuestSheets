@@ -3,7 +3,6 @@ package questsheets.commands;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import hardcorequesting.quests.Quest;
 import hardcorequesting.quests.QuestAdapters;
 import hardcorequesting.quests.QuestSet;
 import net.minecraft.command.ICommandSender;
@@ -37,7 +36,7 @@ public abstract class CommandBase implements ISubCommand
     @Override
     public boolean isVisible(ICommandSender sender)
     {
-        return Quest.isEditing;
+        return true;
     }
 
     public static File getFile(String name)

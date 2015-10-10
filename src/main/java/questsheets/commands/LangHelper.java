@@ -8,7 +8,9 @@ public class LangHelper
     public static final String NO_PERMISSION = PREFIX + "noPermission";
     public static final String SAVE_FAILED = PREFIX + "saveFailed";
     public static final String SAVE_SUCCESS = PREFIX + "savedTo";
-    public static final String LOADFAILED = PREFIX + "loadFailed";
+    public static final String LOAD_FAILED = PREFIX + "loadFailed";
+    public static final String LOAD_SUCCESS = PREFIX + "loadSuccess";
+    public static final String FILE_NOT_FOUND = PREFIX + "fileNotFound";
     public static final String HELP_START = PREFIX + "info.help.start";
 
     protected static final String INFO_SUFFIX = ".info";

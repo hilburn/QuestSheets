@@ -3,12 +3,15 @@ package questsheets;
 import cpw.mods.fml.common.*;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import cpw.mods.fml.common.network.NetworkCheckHandler;
+import cpw.mods.fml.relauncher.Side;
 import net.minecraft.entity.player.EntityPlayer;
 import questsheets.commands.ParentCommand;
 import questsheets.reference.Metadata;
 import questsheets.reference.Reference;
 
 import java.io.File;
+import java.util.Map;
 
 @Mod(name = Reference.NAME, modid = Reference.ID, version = Reference.VERSION_FULL)
 public class QuestSheets
@@ -36,6 +39,12 @@ public class QuestSheets
     public void serverStart(FMLServerStartingEvent event)
     {
         event.registerServerCommand(ParentCommand.instance);
+    }
+
+    @NetworkCheckHandler
+    public boolean networkCheck(Map<String, String> map, Side side)
+    {
+        return true;
     }
 
     public static EntityPlayer getPlayer()

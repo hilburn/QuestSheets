@@ -2,7 +2,6 @@ package hardcorequesting.quests;
 
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import cpw.mods.fml.relauncher.ReflectionHelper;
 import hardcorequesting.SaveHelper;
@@ -15,7 +14,6 @@ import questsheets.parsing.MinecraftAdapters;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -132,7 +130,9 @@ public class QuestAdapters
                 out.endObject();
                 return;
             }
-            out.name(REQUIRED).value(required);
+            if (required != 1)
+                out.name(REQUIRED).value(required);
+            if (precision != ItemPrecision.PRECISE)
             out.name(PRECISION).value(precision.name());
             out.endObject();
         }
@@ -209,7 +209,8 @@ public class QuestAdapters
             out.name(Z).value(value.getZ());
             out.name(DIM).value(value.getDimension());
             out.name(RADIUS).value(value.getRadius());
-            out.name(VISIBLE).value(value.getVisible().name());
+            if (value.getVisible() != QuestTaskLocation.Visibility.LOCATION)
+                out.name(VISIBLE).value(value.getVisible().name());
             out.endObject();
         }
 
@@ -384,8 +385,10 @@ public class QuestAdapters
             out.beginObject();
             TaskType type = TaskType.getType(value.getClass());
             out.name(TYPE).value(type.name());
-            out.name(DESCRIPTION).value(value.getDescription());
-            out.name(LONG_DESCRIPTION).value(value.getLongDescription());
+            if (!value.getDescription().equals(type.name))
+                out.name(DESCRIPTION).value(value.getDescription());
+            if (!value.getLongDescription().equals(type.description))
+                out.name(LONG_DESCRIPTION).value(value.getLongDescription());
             if (value instanceof QuestTaskItems)
             {
                 out.name(ITEMS).beginArray();
@@ -588,7 +591,8 @@ public class QuestAdapters
                 }
             }
             in.endObject();
-            return new Quest.ReputationReward(Reputation.getReputation(rep), val);
+            Reputation reputation = Reputation.getReputation(rep);
+            return reputation != null ? new Quest.ReputationReward(reputation, val) : null;
         }
     };
 
@@ -667,10 +671,12 @@ public class QuestAdapters
 
         private void writeQuestList(JsonWriter out, List<Quest> quests, List<Quest> setQuests, String name) throws IOException
         {
-            if (!quests.isEmpty())
+            List<Quest> inSetQuests = new ArrayList<>(setQuests);
+            inSetQuests.retainAll(quests);
+            if (!inSetQuests.isEmpty())
             {
                 out.name(name).beginArray();
-                for (Quest quest : quests)
+                for (Quest quest : inSetQuests)
                 {
                     int index = setQuests.indexOf(quest);
                     if (index != -1)

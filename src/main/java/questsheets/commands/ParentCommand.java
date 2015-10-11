@@ -48,7 +48,6 @@ public class ParentCommand extends CommandBase
     @SuppressWarnings(value = "unchecked")
     public List addTabCompletionOptions(ICommandSender sender, String[] args)
     {
-
         if (args.length == 1)
         {
             String subCommand = args[0];

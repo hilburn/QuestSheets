@@ -11,7 +11,10 @@ import questsheets.QuestSheets;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
 
 public class CommandSave extends CommandBase
 {
@@ -28,7 +31,12 @@ public class CommandSave extends CommandBase
         {
             for (QuestSet set : Quest.getQuestSets())
             {
-                save(sender, set, set.getName());
+                try
+                {
+                    save(sender, set, set.getName());
+                }catch (CommandException ignored)
+                {
+                }
             }
         } else if (arguments.length > 0)
         {
@@ -44,12 +52,40 @@ public class CommandSave extends CommandBase
                     }
                     fileName = fileName.substring(0, fileName.length() - 1);
                     save(sender, set, fileName);
+                    return;
                 } else if (name.length == arguments.length && stringsMatch(name, arguments))
                 {
                     save(sender, set, set.getName());
+                    return;
                 }
             }
+            String arg = "";
+            for (String subName : arguments)
+            {
+                arg += subName + " ";
+            }
+            arg = arg.substring(0, arg.length() - 1);
+            throw new CommandException(LangHelper.QUEST_NOT_FOUND, arg);
         }
+
+    }
+
+    @Override
+    public List<String> addTabCompletionOptions(ICommandSender sender, String[] args)
+    {
+        String text = "";
+        for (int i = 1; i < args.length; i++)
+        {
+            text += args[i] + " ";
+        }
+        text = text.substring(0, text.length()-1);
+        Pattern pattern = Pattern.compile("^" + Pattern.quote(text), Pattern.CASE_INSENSITIVE);
+        List<String> results = new ArrayList<>();
+        for (QuestSet set : Quest.getQuestSets())
+        {
+            if (pattern.matcher(set.getName()).find()) results.add(set.getName());
+        }
+        return results;
     }
 
     private static boolean stringsMatch(String[] sub, String[] search)
@@ -73,7 +109,7 @@ public class CommandSave extends CommandBase
             sender.addChatMessage(new ChatComponentText(StatCollector.translateToLocalFormatted(LangHelper.SAVE_SUCCESS, file.getPath().substring(QuestSheets.configDir.getParentFile().getParent().length()))));
         } catch (IOException e)
         {
-            throw new CommandException(LangHelper.SAVE_FAILED);
+            throw new CommandException(LangHelper.SAVE_FAILED, name);
         }
     }
 }

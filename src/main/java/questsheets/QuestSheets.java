@@ -1,7 +1,6 @@
 package questsheets;
 
-import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.ModMetadata;
+import cpw.mods.fml.common.*;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import net.minecraft.entity.player.EntityPlayer;
@@ -11,7 +10,7 @@ import questsheets.reference.Reference;
 
 import java.io.File;
 
-@Mod(name = Reference.NAME, modid = Reference.ID, version = Reference.VERSION_FULL, dependencies = "required-after:HardcoreQuesting")
+@Mod(name = Reference.NAME, modid = Reference.ID, version = Reference.VERSION_FULL)
 public class QuestSheets
 {
     public static File configDir;
@@ -33,6 +32,7 @@ public class QuestSheets
     }
 
     @Mod.EventHandler
+    @Optional.Method(modid = "HardcoreQuesting")
     public void serverStart(FMLServerStartingEvent event)
     {
         event.registerServerCommand(ParentCommand.instance);

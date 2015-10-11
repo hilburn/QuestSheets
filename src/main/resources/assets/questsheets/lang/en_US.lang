@@ -7,8 +7,9 @@ qs.command.noPermission=You not have permission to use this command
 qs.command.loadFailed=Loading failed
 qs.command.loadSuccess=Loaded: %s
 qs.command.fileNotFound=File not found
-qs.command.saveFailed=Save failed
+qs.command.saveFailed=Saving %s failed
 qs.command.savedTo=Quests saved to: %s
+qs.command.questNotFound=Quest page %s not found
 
 qs.command.info.help.start=Available commands are:
 qs.command.help.syntax=/qs help [command]

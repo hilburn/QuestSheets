@@ -11,6 +11,7 @@ public class LangHelper
     public static final String LOAD_FAILED = PREFIX + "loadFailed";
     public static final String LOAD_SUCCESS = PREFIX + "loadSuccess";
     public static final String FILE_NOT_FOUND = PREFIX + "fileNotFound";
+    public static final String QUEST_NOT_FOUND = PREFIX + "questNotFound";
     public static final String HELP_START = PREFIX + "info.help.start";
 
     protected static final String INFO_SUFFIX = ".info";

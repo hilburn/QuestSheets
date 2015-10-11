@@ -1,6 +1,8 @@
 package questsheets.commands;
 
 import com.google.gson.stream.JsonReader;
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.server.FMLServerHandler;
 import hardcorequesting.QuestingData;
 import hardcorequesting.commands.CommandHandler;
 import hardcorequesting.quests.Quest;
@@ -14,6 +16,9 @@ import questsheets.QuestSheets;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 public class CommandLoad extends CommandBase
 {
@@ -42,6 +47,7 @@ public class CommandLoad extends CommandBase
             file = file.substring(0, file.length() - 1);
             load(sender, getFile(file));
         }
+        Quest.FILE_HELPER.saveData(null);
     }
 
     private File[] getPossibleFiles()
@@ -72,7 +78,24 @@ public class CommandLoad extends CommandBase
             e.printStackTrace();
             throw new CommandException(LangHelper.LOAD_FAILED);
         }
+    }
 
+    @Override
+    public List<String> addTabCompletionOptions(ICommandSender sender, String[] args)
+    {
+        String text = "";
+        for (int i = 1; i < args.length; i++)
+        {
+            text += args[i] + " ";
+        }
+        text = text.substring(0, text.length()-1);
+        Pattern pattern = Pattern.compile("^" + Pattern.quote(text), Pattern.CASE_INSENSITIVE);
+        List<String> results = new ArrayList<>();
+        for (File file : getPossibleFiles())
+        {
+            if (pattern.matcher(file.getName()).find()) results.add(file.getName().replace(".json", ""));
+        }
+        return results;
     }
 
     @Override

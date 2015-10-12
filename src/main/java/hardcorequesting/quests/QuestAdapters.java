@@ -21,8 +21,9 @@ import java.util.List;
 
 public class QuestAdapters
 {
-    public static Quest LOADING_QUEST;
-    public static QuestTask LOADING_TASK;
+    public static QuestSet SET;
+    public static Quest QUEST;
+    public static QuestTask TASK;
 
 
     public enum TaskType
@@ -201,7 +202,7 @@ public class QuestAdapters
         public QuestTaskLocation.Location read(JsonReader in) throws IOException
         {
             in.beginObject();
-            QuestTaskLocation.Location result = ((QuestTaskLocation)LOADING_TASK).new Location();
+            QuestTaskLocation.Location result = ((QuestTaskLocation) TASK).new Location();
             while (in.peek() != JsonToken.NULL)
             {
                 String name = in.nextName();
@@ -264,7 +265,7 @@ public class QuestAdapters
         public QuestTaskMob.Mob read(JsonReader in) throws IOException
         {
             in.beginObject();
-            QuestTaskMob.Mob result = ((QuestTaskMob)LOADING_TASK).new Mob();
+            QuestTaskMob.Mob result = ((QuestTaskMob) TASK).new Mob();
             while (in.peek() != JsonToken.NULL)
             {
                 String name = in.nextName();
@@ -350,9 +351,11 @@ public class QuestAdapters
         }
     };
     
-    public static final TypeAdapter<QuestTask> TASK_ADAPTER = new TypeAdapter<QuestTask>()
+    private static final TypeAdapter<QuestTask> TASK_ADAPTER = new TypeAdapter<QuestTask>()
     {
         private final String TYPE = "type";
+        private final String DESCRIPTION = "description";
+        private final String LONG_DESCRIPTION = "longDescription";
         private final String ITEMS = "items";
         private final String DEATHS = "deaths";
         private final String LOCATIONS = "locations";
@@ -366,6 +369,8 @@ public class QuestAdapters
             out.beginObject();
             TaskType type = TaskType.getType(value.getClass());
             out.name(TYPE).value(type.name());
+            out.name(DESCRIPTION).value(value.getDescription());
+            out.name(LONG_DESCRIPTION).value(value.getLongDescription());
             if (value instanceof QuestTaskItems)
             {
                 out.name(ITEMS).beginArray();
@@ -423,11 +428,17 @@ public class QuestAdapters
             {
                 throw new IOException("Invalid Task Type: " + task);
             }
-            LOADING_TASK = type.addTask(LOADING_QUEST);
-            if (LOADING_TASK instanceof QuestTaskItems)
+            TASK = type.addTask(QUEST);
+            while (in.hasNext())
             {
                 String name = in.nextName();
-                if (name.equalsIgnoreCase(ITEMS))
+                if (name.equalsIgnoreCase(DESCRIPTION))
+                {
+                    TASK.description = in.nextString();
+                } else if (name.equalsIgnoreCase(LONG_DESCRIPTION))
+                {
+                    TASK.setLongDescription(in.nextString());
+                } else if (TASK instanceof QuestTaskItems && name.equalsIgnoreCase(ITEMS))
                 {
                     List<QuestTaskItems.ItemRequirement> list = new ArrayList<QuestTaskItems.ItemRequirement>();
                     in.beginArray();
@@ -437,20 +448,12 @@ public class QuestAdapters
                         if (entry != null) list.add(entry);
                     }
                     in.endArray();
-                    ((QuestTaskItems) LOADING_TASK).setItems(list.toArray(new QuestTaskItems.ItemRequirement[list.size()]));
-                }
-            } else if (LOADING_TASK instanceof QuestTaskDeath)
-            {
-                String name = in.nextName();
-                if (name.equalsIgnoreCase(DEATHS))
+                    ((QuestTaskItems) TASK).setItems(list.toArray(new QuestTaskItems.ItemRequirement[list.size()]));
+                } else if (TASK instanceof QuestTaskDeath && name.equalsIgnoreCase(DEATHS))
                 {
                     int death = in.nextInt();
-                    ((QuestTaskDeath) LOADING_TASK).setDeaths(death);
-                }
-            } else if (LOADING_TASK instanceof QuestTaskLocation)
-            {
-                String name = in.nextName();
-                if (name.equalsIgnoreCase(LOCATIONS))
+                    ((QuestTaskDeath) TASK).setDeaths(death);
+                } else if (TASK instanceof QuestTaskLocation &&name.equalsIgnoreCase(LOCATIONS))
                 {
                     List<QuestTaskLocation.Location> list = new ArrayList<QuestTaskLocation.Location>();
                     in.beginArray();
@@ -460,12 +463,8 @@ public class QuestAdapters
                         if (entry != null) list.add(entry);
                     }
                     in.endArray();
-                    ((QuestTaskLocation) LOADING_TASK).locations = list.toArray(new QuestTaskLocation.Location[list.size()]);
-                }
-            }  else if (LOADING_TASK instanceof QuestTaskMob)
-            {
-                String name = in.nextName();
-                if (name.equalsIgnoreCase(MOBS))
+                    ((QuestTaskLocation) TASK).locations = list.toArray(new QuestTaskLocation.Location[list.size()]);
+                } else if (TASK instanceof QuestTaskMob && name.equalsIgnoreCase(MOBS))
                 {
                     List<QuestTaskMob.Mob> list = new ArrayList<QuestTaskMob.Mob>();
                     in.beginArray();
@@ -475,42 +474,208 @@ public class QuestAdapters
                         if (entry != null) list.add(entry);
                     }
                     in.endArray();
-                    ((QuestTaskMob) LOADING_TASK).mobs = list.toArray(new QuestTaskMob.Mob[list.size()]);
-                }
-            }  else if (LOADING_TASK instanceof QuestTaskReputation)
-            {
-                while (in.hasNext())
+                    ((QuestTaskMob) TASK).mobs = list.toArray(new QuestTaskMob.Mob[list.size()]);
+                } else if (TASK instanceof QuestTaskReputation && name.equalsIgnoreCase(REPUTATION))
                 {
-                    String name = in.nextName();
-                    if (name.equalsIgnoreCase(REPUTATION))
+                    List<QuestTaskReputation.ReputationSetting> list = new ArrayList<QuestTaskReputation.ReputationSetting>();
+                    in.beginArray();
+                    while (in.hasNext())
                     {
-                        List<QuestTaskReputation.ReputationSetting> list = new ArrayList<QuestTaskReputation.ReputationSetting>();
-                        in.beginArray();
-                        while (in.hasNext())
-                        {
-                            list.add(REPUTATION_ADAPTER.read(in));
-                        }
-                        in.endArray();
-                        ReflectionHelper.setPrivateValue(QuestTaskReputation.class, (QuestTaskReputation) LOADING_TASK, list.toArray(new QuestTaskReputation.ReputationSetting[list.size()]), "settings");
-                    } else if (name.equalsIgnoreCase(KILLS) && LOADING_TASK instanceof QuestTaskReputationKill)
-                    {
-                        ((QuestTaskReputationKill) LOADING_TASK).setKills(in.nextInt());
+                        list.add(REPUTATION_ADAPTER.read(in));
                     }
-
+                    in.endArray();
+                    ReflectionHelper.setPrivateValue(QuestTaskReputation.class, (QuestTaskReputation) TASK, list.toArray(new QuestTaskReputation.ReputationSetting[list.size()]), "settings");
+                }
+                else if (name.equalsIgnoreCase(KILLS) && TASK instanceof QuestTaskReputationKill)
+                {
+                    ((QuestTaskReputationKill) TASK).setKills(in.nextInt());
                 }
             }
-
             in.endObject();
             return null;
         }
     };
 
+    private static final TypeAdapter<RepeatInfo> REPEAT_INFO_ADAPTER = new TypeAdapter<RepeatInfo>()
+    {
+        private final String TYPE = "type";
+        private final String HOURS = "hours";
+        private final String DAYS = "days";
+
+        @Override
+        public void write(JsonWriter out, RepeatInfo value) throws IOException
+        {
+            out.beginObject();
+            out.name(TYPE).value(value.getType().name());
+            if (value.getType().isUseTime())
+            {
+                out.name(DAYS).value(value.getDays());
+                out.name(HOURS).value(value.getHours());
+            }
+            out.endObject();
+        }
+
+        @Override
+        public RepeatInfo read(JsonReader in) throws IOException
+        {
+            RepeatType type = null;
+            int days = 0, hours = 0;
+            in.beginObject();
+            while (in.hasNext())
+            {
+                switch(in.nextName())
+                {
+                    case TYPE:
+                        type = RepeatType.valueOf(in.nextName());
+                        break;
+                    case HOURS:
+                        hours = in.nextInt();
+                        break;
+                    case DAYS:
+                        days = in.nextInt();
+                }
+            }
+            in.endObject();
+            if (type == null) type = RepeatType.NONE;
+            return new RepeatInfo(type, days, hours);
+        }
+    };
+
+    private static final TypeAdapter<Quest.ReputationReward> REPUTATION_REWARD_ADAPTER = new TypeAdapter<Quest.ReputationReward>()
+    {
+        private final String REPUTATION = "reputation";
+        private final String VALUE = "value";
+
+        @Override
+        public void write(JsonWriter out, Quest.ReputationReward value) throws IOException
+        {
+            out.beginObject();
+            out.name(REPUTATION).value(value.getReputation().getId());
+            out.name(VALUE).value(value.getValue());
+            out.endObject();
+        }
+
+        @Override
+        public Quest.ReputationReward read(JsonReader in) throws IOException
+        {
+            in.beginObject();
+            int rep = 0, val = 0;
+            while (in.hasNext())
+            {
+                switch (in.nextName())
+                {
+                    case REPUTATION:
+                        rep = in.nextInt();
+                        break;
+                    case VALUE:
+                        val = in.nextInt();
+                        break;
+                }
+            }
+            in.endObject();
+            return new Quest.ReputationReward(Reputation.getReputation(rep), val);
+        }
+    };
+
     public static final TypeAdapter<Quest> QUEST_ADAPTER = new TypeAdapter<Quest>()
     {
+        private final String NAME = "name";
+        private final String DESCRIPTION = "description";
+        private final String X = "x";
+        private final String Y = "y";
+        private final String ICON = "icon";
+        private final String BIG_ICON = "bigIcon";
+        private final String REQUIREMENTS = "requirements";
+        private final String LINKS = "links";
+        private final String REPEAT = "repeat";
+        private final String TRIGGER = "trigger";
+        private final String TRIGGER_TASKS = "triggerTasks";
+        private final String PARENT_REQUIREMENT = "parentRequirement";
+        private final String TASKS = "tasks";
+        private final String REWARDS = "reward";
+        private final String REWARDS_CHOICE = "rewardChoice";
+        private final String REWARDS_REPUTATION = "reputationRewards";
+
+
         @Override
         public void write(JsonWriter out, Quest value) throws IOException
         {
+            out.beginObject();
+            out.name(NAME).value(value.getName());
+            out.name(DESCRIPTION).value(value.getDescription());
+            out.name(X).value(value.getGuiX());
+            out.name(Y).value(value.getGuiY());
+            if (value.useBigIcon())
+            {
+                out.name(BIG_ICON).value(true);
+            }
+            if (value.getIcon() != null)
+            {
+                MinecraftAdapters.ITEM_STACK.write(out.name(ICON), value.getIcon());
+            }
+            writeQuestList(out, value.getRequirement(), value.getQuestSet().getQuests(), REQUIREMENTS);
+            writeQuestList(out, value.getOptionLinks(), value.getQuestSet().getQuests(), LINKS);
+            REPEAT_INFO_ADAPTER.write(out.name(REPEAT), value.getRepeatInfo());
+            out.name(TRIGGER).value(value.getTriggerType().name());
+            if (value.getTriggerType().isUseTaskCount())
+            {
+                out.name(TRIGGER_TASKS).value(value.getTriggerTasks());
+            }
+            if (value.getUseModifiedParentRequirement())
+            {
+                out.name(PARENT_REQUIREMENT).value(value.getParentRequirementCount());
+            }
+            out.name(TASKS).beginArray();
+            for (QuestTask task : value.getTasks())
+            {
+                TASK_ADAPTER.write(out, task);
+            }
+            out.endArray();
+            writeItemStackArray(out, (ItemStack[]) ReflectionHelper.getPrivateValue(Quest.class, value, REWARDS), REWARDS);
+            writeItemStackArray(out, (ItemStack[]) ReflectionHelper.getPrivateValue(Quest.class, value, REWARDS_CHOICE), REWARDS_CHOICE);
+            if (value.getReputationRewards() != null && !value.getReputationRewards().isEmpty())
+            {
+                out.name(REWARDS_REPUTATION).beginArray();
+                for (Quest.ReputationReward reward : value.getReputationRewards())
+                {
+                    REPUTATION_REWARD_ADAPTER.write(out, reward);
+                }
+                out.endArray();
+            }
+            out.endObject();
+        }
 
+        private void writeQuestList(JsonWriter out, List<Quest> quests, List<Quest> setQuests, String name) throws IOException
+        {
+            if (!quests.isEmpty())
+            {
+                out.name(name).beginArray();
+                for (Quest quest : quests)
+                {
+                    int index = setQuests.indexOf(quest);
+                    if (index != -1)
+                    {
+                        out.value(index);
+                    }
+                }
+                out.endArray();
+            }
+        }
+
+        private void writeItemStackArray(JsonWriter out, ItemStack[] stacks, String name) throws IOException
+        {
+            if (stacks != null)
+            {
+                out.name(name).beginArray();
+                for (ItemStack stack : stacks)
+                {
+                    if (stack != null)
+                    {
+                        MinecraftAdapters.ITEM_STACK.write(out, stack);
+                    }
+                }
+                out.endArray();
+            }
         }
 
         @Override

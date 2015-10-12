@@ -1,15 +1,50 @@
 package questsheets;
 
 import cpw.mods.fml.common.Mod;
-import net.minecraft.client.entity.EntityClientPlayerMP;
+import cpw.mods.fml.common.ModMetadata;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import net.minecraft.entity.player.EntityPlayer;
+import questsheets.commands.ParentCommand;
+import questsheets.reference.Metadata;
 import questsheets.reference.Reference;
+
+import java.io.File;
 
 @Mod(name = Reference.NAME, modid = Reference.ID, version = Reference.VERSION_FULL, dependencies = "required-after:HardcoreQuesting")
 public class QuestSheets
 {
+    public static File configDir;
+
+    private static EntityPlayer commandUser;
+
+    @Mod.Metadata(Reference.ID)
+    public static ModMetadata metadata;
+
+    @Mod.Instance(value = Reference.ID)
+    public static QuestSheets INSTANCE;
+
+    @Mod.EventHandler
+    public void preInit(FMLPreInitializationEvent event)
+    {
+        metadata = Metadata.init(metadata);
+        configDir = new File(event.getModConfigurationDirectory(), Reference.ID);
+        if (!configDir.exists()) configDir.mkdir();
+    }
+
+    @Mod.EventHandler
+    public void serverStart(FMLServerStartingEvent event)
+    {
+        event.registerServerCommand(ParentCommand.instance);
+    }
+
     public static EntityPlayer getPlayer()
     {
-        return new EntityClientPlayerMP(null, null, null, null, null);
+        return commandUser;
+    }
+
+    public static void setPlayer(EntityPlayer player)
+    {
+        commandUser = player;
     }
 }

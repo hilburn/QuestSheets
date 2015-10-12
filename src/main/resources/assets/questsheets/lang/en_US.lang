@@ -1,0 +1,17 @@
+# ======================================
+#				COMMAND
+# ======================================
+
+qs.command.notFound=Command not found
+qs.command.noPermission=You not have permission to use this command
+qs.command.loadFailed=Loading failed
+qs.command.saveFailed=Save failed
+qs.command.savedTo=Quests saved to: %s
+
+qs.command.info.help.start=Available commands are:
+qs.command.help.syntax=/qs help [command]
+qs.command.help.info=For help with all available commands.
+qs.command.load.syntax=/qs load <filename>
+qs.command.load.info=Load the given quest line into HQM.
+qs.command.save.syntax=/qs save <Quest Page> [filename]
+qs.command.save.info=Saves the given quest page to a JSON file, filename defaults to the page's name

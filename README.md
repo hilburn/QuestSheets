@@ -3,6 +3,8 @@ QuestSheets
 
 Adds Json save/load functionality to HQM
 
+IMPORTANT: due to HQM being opensourced - this project will be closed down and all future development done within HQM itself
+
 ## Contributors
 hilburn
 
